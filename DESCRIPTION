@@ -1,8 +1,8 @@
 Package: eva3dm
 Type: Package
 Title: Evaluation of 3D Meteorological and Air Quality Models
-Version: 0.99
-Date: 2024-11-19
+Version: 0.99.1
+Date: 2024-11-24
 Description: Provides tools for post-process, evaluate and visualize results from 3d Meteorological and Air Quality models against point observations (i.e. surface stations) and grid (i.e. satellite) observations.
 Authors@R: c(
   person(given = "Daniel",
@@ -22,7 +22,7 @@ Depends: R (>= 3.5.0)
 URL: https://schuch666.github.io/eva3dm/
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2024-11-21 05:25:28 UTC; under
+Packaged: 2024-11-24 20:15:49 UTC; under
 Author: Daniel Schuch [aut, cre] (<https://orcid.org/0000-0001-5977-4519>)
 Repository: CRAN
-Date/Publication: 2024-11-21 17:40:11 UTC
+Date/Publication: 2024-11-25 08:50:02 UTC

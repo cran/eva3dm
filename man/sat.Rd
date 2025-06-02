@@ -12,9 +12,11 @@ sat(
   n = 6,
   min = NA,
   max = NA,
+  scale,
   method = "bilinear",
   eval_function = stat,
   mask,
+  skip_interp = FALSE,
   verbose = TRUE,
   ...
 )
@@ -34,11 +36,15 @@ sat(
 
 \item{max}{maximum value cutoff}
 
+\item{scale}{multiplier for model and observation (after min/max cutoff)}
+
 \item{method}{passed to terra::resample}
 
 \item{eval_function}{evaluation function (default is stat)}
 
 \item{mask}{optional SpatVector to mask the results}
+
+\item{skip_interp}{skip the interpolation step}
 
 \item{verbose}{set TRUE to display additional information}
 
@@ -56,16 +62,27 @@ If a YOU DIED error message appears, means you are removing all the valid values
 If cate() is used for eval_function, the argument threshold must be included (see example).
 }
 \examples{
-model_o3 <- terra::rast(paste0(system.file("extdata",package="eva3dm"),
+model_no2 <- terra::rast(paste0(system.file("extdata",package="eva3dm"),
                               "/camx_no2.Rds"))
-omi_o3   <- terra::rast(paste0(system.file("extdata",package="eva3dm"),
+omi_no2   <- terra::rast(paste0(system.file("extdata",package="eva3dm"),
                               "/omi_no2.Rds"))
 
 # generate the statistical indexes
-sat(mo = model_o3,ob = omi_o3,rname = 'NO2_statistical')
+sat(mo = model_no2,ob = omi_no2,rname = 'NO2_statistical')
 
 # generate categorical evaluation using 3.0 as threshold
-sat(mo = model_o3,ob = omi_o3,rname = 'NO2_categorical',
+sat(mo = model_no2,ob = omi_no2,rname = 'NO2_categorical',
     eval_function = cate, threshold = 3.0)
+
+# customizing the evaluation function: inclusion of p.value from stats::cor.test()
+stat_p <- function(x, y, ...){
+  table         <- eva3dm::stat(x, y, ...)
+  cor.result    <- stats::cor.test(x, y, ... )
+  table$p.value <- cor.result$p.value
+  table         <- table[,c(1:4,12,5:11)]
+  return(table)
+}
+
+sat(mo = model_no2,ob = omi_no2,rname = 'NO2_statistical_with_p',eval_function = stat_p)
 
 }

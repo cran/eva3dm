@@ -17,17 +17,18 @@
 #' @param add_range add legend with max, average and min r values
 #' @param ndig number of digits for legend_range
 #' @param range range of original values to plot
+#' @param scale variable multiplier (not affect min/max/range)
 #' @param log TRUE to plot in log-scale
-#' @param min minimum log value for log scale (defoul is -3)
+#' @param min minimum log value for log scale (default is -3)
 #' @param max maximum log value for log scale
-#' @param unit title for color bar (defoult is )
+#' @param unit title for color bar
 #' @param ... arguments to be passing to terra::plot
 #'
 #' @return No return value
 #'
 #' @import terra
 #'
-#' @note color scale includes: 'eva3r' (default), 'eva4', 'blues' and 'diff'
+#' @note color scales including: 'eva3', 'eva4', 'blues', 'diff', and 'rain'. Also reverse version with addition of a r ('eva3r' is the default).
 #'
 #' @export
 #'
@@ -55,6 +56,7 @@ plot_rast <- function(r,
                       ndig = 2,
                       log = FALSE,
                       range,
+                      scale,
                       min = -3,
                       max,
                       unit,
@@ -70,6 +72,11 @@ plot_rast <- function(r,
     latlon = TRUE  # nocov
   }else{
     latlon = FALSE # nocov
+  }
+
+  if(!missing(scale)){
+    unit <- terra::units(r)[1]
+    r = scale * r
   }
 
   if(!missing(range) & !log){
@@ -90,6 +97,19 @@ plot_rast <- function(r,
       color <- color(ncolor) # nocov
     }
   }
+  # nocov start
+  if(color[1] == 'eva3')
+    # eva 3 colors reverse
+    color <- c("#AD7AD7","#A670CF","#9F67C7","#995EBF","#9255B7",
+               "#8C4CAF","#8542A7","#7F39A0","#783098","#722790",
+               "#6E228C","#732E97","#783AA2","#7D47AD","#8253B9",
+               "#875FC4","#8C6BCF","#9178DA","#9684E6","#9B90F1",
+               "#9C95F4","#948DED","#8D86E5","#857EDD","#7E77D5",
+               "#766FCE","#6F68C6","#6760BE","#6059B6","#5851AF",
+               "#5B57A8","#6365A1","#6B739A","#748294","#7C908D",
+               "#849E86","#8DAC80","#95BA79","#9DC872","#A6D76C",
+               "#A1D466","#99CC60","#90C55B","#88BE55","#80B650",
+               "#78AF4A","#6FA844","#67A03F","#5F9939","#579234")
   if(color[1] == 'eva3r')
     # eva 3 colors reverse
     color <- rev(c("#AD7AD7","#A670CF","#9F67C7","#995EBF","#9255B7",
@@ -102,7 +122,6 @@ plot_rast <- function(r,
                    "#849E86","#8DAC80","#95BA79","#9DC872","#A6D76C",
                    "#A1D466","#99CC60","#90C55B","#88BE55","#80B650",
                    "#78AF4A","#6FA844","#67A03F","#5F9939","#579234"))
-  # nocov start
   if(color[1] == 'eva4')
     # eva 4 colors
     color <- c("#AD7AD7","#A36DCC","#9A60C1","#9153B6","#8846AB",
@@ -115,6 +134,19 @@ plot_rast <- function(r,
                "#579234","#6D9838","#839F3C","#9AA540","#B0AC45",
                "#C7B249","#DDB94D","#F4C052","#EDB44D","#E6A948",
                "#DF9D43","#D9923E","#D28639","#CB7B34","#C5702F")
+
+  if(color[1] == 'eva4r')
+    # eva 4 colors
+    color <- rev(c("#AD7AD7","#A36DCC","#9A60C1","#9153B6","#8846AB",
+                   "#7F39A0","#762C94","#6D208A","#743199","#7B42A9",
+                   "#8253B9","#8964C8","#9075D8","#9786E8","#9F98F8",
+                   "#948DED","#8A83E2","#7F78D7","#756ECC","#6A63C1",
+                   "#6059B6","#564FAC","#6162A2","#6D7699","#798A90",
+                   "#849E86","#90B27D","#9CC674","#A8DA6B","#9CCF63",
+                   "#90C55B","#85BB53","#79B04B","#6EA643","#629C3B",
+                   "#579234","#6D9838","#839F3C","#9AA540","#B0AC45",
+                   "#C7B249","#DDB94D","#F4C052","#EDB44D","#E6A948",
+                   "#DF9D43","#D9923E","#D28639","#CB7B34","#C5702F"))
 
   if(color[1] == 'blues')
     # desaturated blue
@@ -140,6 +172,41 @@ plot_rast <- function(r,
                "#FEFAE6","#FDF0B4","#FDDA7C","#FEBC48",
                "#FB992F","#F7762B","#E84E29","#D72828",
                "#B81B22","#97161A","#921519")
+  if(color[1] == 'diffr')
+    # diff including dark_blue - cyan - white - orange - dark_red
+    color <- rev(c("#1B2C62","#204385","#265CA9","#4082C2",
+                   "#5DA9DB","#80C4EA","#A4DDF7","#C1E7F8",
+                   "#DEF2FA","#F2FAFD","#FFFFFF","#FFFFFF",
+                   "#FEFAE6","#FDF0B4","#FDDA7C","#FEBC48",
+                   "#FB992F","#F7762B","#E84E29","#D72828",
+                   "#B81B22","#97161A","#921519"))
+
+  if(color[1] == 'rain')
+    # diff including crean - litgh_blue - dark_blue
+    color <- c("#FFFAEB","#F5F5EB","#ECF0EB","#E3ECEC","#DAE7EC",
+               "#D1E3ED","#C7DEED","#BED9EE","#B5D5EE","#ACD0EF",
+               "#A3CCEF","#99C7F0","#90C2F0","#87BEF1","#7EB9F1",
+               "#77B4F1","#74AFEE","#71AAEC","#6DA5EA","#6AA0E7",
+               "#679BE5","#6396E3","#6091E0","#5D8CDE","#5A87DC",
+               "#5681DA","#537CD7","#5077D5","#4C72D3","#496DD0",
+               "#4668CE","#4363CC","#3F5ECA","#3C59C7","#3954C5",
+               "#354FC3","#324AC0","#2F44BE","#2C3FBC","#283AB9",
+               "#2535B7","#2230B5","#1E2BB3","#1B26B0","#1821AE",
+               "#151CAC","#1117A9","#0E12A7","#0B0DA5","#0808A3")
+
+  if(color[1] == 'rainr')
+    # diff including crean - litgh_blue - dark_blue
+    color <- rev(c("#FFFAEB","#F5F5EB","#ECF0EB","#E3ECEC","#DAE7EC",
+                   "#D1E3ED","#C7DEED","#BED9EE","#B5D5EE","#ACD0EF",
+                   "#A3CCEF","#99C7F0","#90C2F0","#87BEF1","#7EB9F1",
+                   "#77B4F1","#74AFEE","#71AAEC","#6DA5EA","#6AA0E7",
+                   "#679BE5","#6396E3","#6091E0","#5D8CDE","#5A87DC",
+                   "#5681DA","#537CD7","#5077D5","#4C72D3","#496DD0",
+                   "#4668CE","#4363CC","#3F5ECA","#3C59C7","#3954C5",
+                   "#354FC3","#324AC0","#2F44BE","#2C3FBC","#283AB9",
+                   "#2535B7","#2230B5","#1E2BB3","#1B26B0","#1821AE",
+                   "#151CAC","#1117A9","#0E12A7","#0B0DA5","#0808A3"))
+
   # nocov end
   e_o     <- ext(r)
   Points  <- vect(cbind(x = e_o[1:2], y = e_o[3:4]),
@@ -175,11 +242,16 @@ plot_rast <- function(r,
       ax$side <- 1 # nocov
     }
     pax <- c(pax,ax)
+    plot_axes = TRUE
+  }else{
+    ax  <- list()     # nocov
+    plot_axes = FALSE # nocov
   }
 
   extra <- function(){
     if(grid){
-      terra::lines(terra::graticule(lon = vet_lon,lat = vet_lat,
+      terra::lines(terra::graticule(lon = seq(-180,180,by = grid_int),
+                                    lat = vet_lat,
                                     crs = terra::crs(r,proj=TRUE)),
                    lty = 3, col = grid_col,lwd = 1.2)
     }
@@ -193,10 +265,12 @@ plot_rast <- function(r,
   }
 
   if(missing(unit)){
-    plg = c(plg,list(title = terra::units(r)[1]))
-  }else{
-    plg = c(plg,list(title = unit))
+    unit <- terra::units(r)[1]
   }
+  if(!missing(scale)){
+    unit <- paste0(unit,' \u00D7',scale)
+  }
+  plg = c(plg,list(title = unit))
 
   if(log){
     Rlog10 <- function(r,min){
@@ -224,7 +298,7 @@ plot_rast <- function(r,
 
     terra::plot(r_log, col = color,
                 plg = c(plg,arg), pax = pax,
-                axe = TRUE,
+                axe = plot_axes,
                 grid = FALSE,fun = extra,
                 range = c(min,max),
                 ...)
@@ -233,7 +307,7 @@ plot_rast <- function(r,
     b = as.numeric( terra::global(r2,'min',na.rm = TRUE) )
     if(!is.na(a) & a == b)
       plg=list()
-    terra::plot(r2, col = color, plg = plg, pax = pax,axe = TRUE,
+    terra::plot(r2, col = color, plg = plg, pax = pax,axe = plot_axes,
                 grid = FALSE,fun = extra, range = range, ...)
   }
 }
@@ -245,7 +319,7 @@ latlon <- function(r,int,e,tn = 100) {
   proj <-  terra::crs(r,proj=TRUE)
 
   # latitude
-  vet_lon <- seq(-80,80,by = int)
+  vet_lon <- c(-seq(80,int,by = -int),0,seq(int,80,by = int))
   lab_lon <- c(paste0(seq(80,int,by=-int),"\u00baS"),'0',
                paste0(seq(int,80,by=int),"\u00baN"))
 
@@ -259,7 +333,7 @@ latlon <- function(r,int,e,tn = 100) {
   tfcn         <- custom_approxfun(axis_coords[,2], ty)
 
   # longitude
-  vet_lat <- seq(-180,180,by = int)
+  vet_lat <- c(-seq(180,int,by = -int),0,seq(int,180,by = int))
   lab_lat <- c(paste0(seq(180,int,by=-int),"\u00baW"),'0',
                paste0(seq(int,180,by=int),"\u00baE"))
 

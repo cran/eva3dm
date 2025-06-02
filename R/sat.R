@@ -11,9 +11,11 @@
 #' @param n number of points from the boundary removed, default is 5
 #' @param min minimum value cutoff
 #' @param max maximum value cutoff
+#' @param scale multiplier for model and observation (after min/max cutoff)
 #' @param method passed to terra::resample
 #' @param eval_function evaluation function (default is stat)
 #' @param mask optional SpatVector to mask the results
+#' @param skip_interp skip the interpolation step
 #' @param verbose set TRUE to display additional information
 #' @param ... other arguments passed to stat
 #'
@@ -23,24 +25,35 @@
 #' @import terra
 #'
 #' @examples
-#' model_o3 <- terra::rast(paste0(system.file("extdata",package="eva3dm"),
+#' model_no2 <- terra::rast(paste0(system.file("extdata",package="eva3dm"),
 #'                               "/camx_no2.Rds"))
-#' omi_o3   <- terra::rast(paste0(system.file("extdata",package="eva3dm"),
+#' omi_no2   <- terra::rast(paste0(system.file("extdata",package="eva3dm"),
 #'                               "/omi_no2.Rds"))
 #'
 #' # generate the statistical indexes
-#' sat(mo = model_o3,ob = omi_o3,rname = 'NO2_statistical')
+#' sat(mo = model_no2,ob = omi_no2,rname = 'NO2_statistical')
 #'
 #' # generate categorical evaluation using 3.0 as threshold
-#' sat(mo = model_o3,ob = omi_o3,rname = 'NO2_categorical',
+#' sat(mo = model_no2,ob = omi_no2,rname = 'NO2_categorical',
 #'     eval_function = cate, threshold = 3.0)
+#'
+#' # customizing the evaluation function: inclusion of p.value from stats::cor.test()
+#' stat_p <- function(x, y, ...){
+#'   table         <- eva3dm::stat(x, y, ...)
+#'   cor.result    <- stats::cor.test(x, y, ... )
+#'   table$p.value <- cor.result$p.value
+#'   table         <- table[,c(1:4,12,5:11)]
+#'   return(table)
+#' }
+#'
+#' sat(mo = model_no2,ob = omi_no2,rname = 'NO2_statistical_with_p',eval_function = stat_p)
 #'
 #' @export
 
 sat <- function(mo,ob,rname, table = NULL,
-                n = 6, min = NA, max = NA,
+                n = 6, min = NA, max = NA, scale,
                 method = 'bilinear', eval_function = stat,
-                mask, verbose = TRUE, ...){
+                mask, skip_interp = FALSE, verbose = TRUE, ...){
 
   if(missing(mo))
     stop('model input is missing!') # nocov
@@ -55,9 +68,11 @@ sat <- function(mo,ob,rname, table = NULL,
     ob <- rast(ob) # nocov
   }
 
-  cut_boundary <- function(x, n,value = NA){
+  cut_boundary <- function(x, n,value = NA, verbose = FALSE){
 
     if(n < 1) return(x) # nocov
+
+    if(verbose) cat(paste0('removing ',n,' points for the model (mo) lateral boundaryes ...\n'))
 
     if(nlyr(x) == 1){ # for 2d rast
       A       <- matrix(values(x),
@@ -83,10 +98,20 @@ sat <- function(mo,ob,rname, table = NULL,
     }
   }
 
-  if(verbose) cat(paste0('removing ',n,' points for the model (y) boundaryes ...\n'))
-  model <- cut_boundary(mo, n = n)
-  if(verbose) cat('interpolating obs. (x) to model grid (y)...\n')
-  obser <- interp(x = ob, y = mo, method = method, mask = mask, verbose = verbose)
+  if(n >= ncol(mo)/2 | n >= nrow(mo)/2){
+    warning('n is too small, setting n = 0')       # nocov
+    n = 0                                          # nocov
+  }
+
+  model <- cut_boundary(mo, n = n, verbose = verbose)
+
+  if(!skip_interp){
+    if(verbose) cat('interpolating obsservation (ob) to model grid (mo) ...\n')
+    obser <- interp(x = ob, y = mo, method = method, mask = mask, verbose = verbose)
+  }else{
+    if(verbose) cat('skiping interpolation ...\n') # nocov
+    obser <- ob                                    # nocov
+  }
 
   if(!is.na(min)){
     if(verbose) cat('seting min value to',min,'\n')
@@ -99,15 +124,22 @@ sat <- function(mo,ob,rname, table = NULL,
     obser[obser > max] = NA
   }
 
+  if(!missing(scale)){
+    if(verbose)
+      cat('using scale=',scale,'\n')
+    mo = scale * mo
+    ob = scale * ob
+  }
+
   model <- as.vector(model)
   obser <- as.vector(obser)
 
   if(length(model) < 1 | length(obser) < 1) stop('YOU DIED') # nocov
 
   if(missing(rname)){
-    RESULT <- eval_function(model = model, observation = obser, ...)
+    RESULT <- eval_function(model, obser, ...)
   }else{
-    RESULT <- eval_function(model = model, observation = obser,rname = rname, ...)
+    RESULT <- eval_function(model, obser, rname = rname, ...)
   }
   return(rbind(table,RESULT))
 }

@@ -4,11 +4,14 @@
 #'
 #' @param p SpatVector points
 #' @param z column name or a vector of values to plot
-#' @param col color
+#' @param col color for the point
+#' @param col2 color for the outline
 #' @param lim range of values for scale
 #' @param symmetry calculate symmetrical scale
 #' @param pch type of point
+#' @param pch2 type of point for contour
 #' @param cex character expansion for the points
+#' @param cex2 character expansion for the contour
 #' @param outside to include values outside range
 #' @param add add to existing plot
 #' @param plg list of parameters passed to terra::add_legend
@@ -40,11 +43,13 @@
 #' terra::lines(BR)
 #' terra::lines(sp, col = 'gray')
 #'
-overlay <- function(p,z,col,
+overlay <- function(p,z,col,col2,
                     lim      = range(z, na.rm = TRUE),
                     symmetry = TRUE,
                     pch      = 19,
+                    pch2     = 1,
                     cex      = 1.0,
+                    cex2     = 1.2 * cex,
                     outside  = TRUE,
                     add      = FALSE,
                     plg      = list(tic = 'none',shrink=1.00),
@@ -58,6 +63,9 @@ overlay <- function(p,z,col,
     z <- 'NMB (%)'       # nocov
   if(is.character(z)){
     z <- as.data.frame(p[,z])[,1] # nocov
+  }
+  if(missing(col2)){
+    col2 = 'black'
   }
 
   if(missing(col))
@@ -94,7 +102,23 @@ overlay <- function(p,z,col,
   colz   <- colz[-1]
   colz   <- colz[-length(colz)]
 
+  if(length(col2) > 1){
+    nlevels = length(col2)                                    # nocov
+    levels <- seq(lim[1],lim[2],length.out = nlevels)         # nocov
+    colz2  <- col2[cut(c(lim[1],z,lim[2]),nlevels,            # nocov
+                       include.lowest = TRUE,labels = FALSE)] # nocov
+    colz2  <- colz2[-1]                                       # nocov
+    colz2  <- colz2[-length(colz2)]                           # nocov
+  }else{
+    colz2 = col2
+  }
+
   ge <- terra::geom(p)
+  points(x = ge[,'x'],
+         y = ge[,'y'],
+         col = colz2,
+         pch = pch2,
+         cex = cex2, ... )
   points(x = ge[,'x'],
          y = ge[,'y'],
          col = colz,
@@ -116,13 +140,19 @@ overlay <- function(p,z,col,
 #'
 #' @examples
 #'
-#' sites<- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_AQ_BR.Rds"))
+#' sites <- data.frame(lat = c(-22.72500,-23.64300,-20.34350),
+#'                     lon = c(-47.34800,-46.49200,-40.31800),
+#'                     row.names = c('Americana','SAndre','VVIbes'),
+#'                     stringsAsFactors = F)
 #' model<- readRDS(paste0(system.file("extdata",package="eva3dm"),"/model.Rds"))
 #' obs  <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/obs.Rds"))
 #'
-#' stats <- eva(mo = model, ob = obs, site = 'Americana')
-#' stats <- eva(mo = model, ob = obs, site = 'SAndre',table = stats)
-#' stats <- eva(mo = model, ob = obs, site = 'VVIbes',table = stats)
+#' # evaluation by station
+#' stats <- eva(mo = model, ob = obs, site = "Americana")
+#' stats <- eva(mo = model, ob = obs, site = "SAndre",table = stats)
+#' stats <- eva(mo = model, ob = obs, site = "VVIbes",table = stats)
+#' # evaluation using all stations
+#' stats <- eva(mo = model, ob = obs, site = "ALL", table = stats)
 #'
 #' print(stats)
 #'

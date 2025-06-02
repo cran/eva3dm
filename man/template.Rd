@@ -41,13 +41,19 @@ Create templates of code (r-scripts and bash job-submission script) to read, pos
 \note{
 Templates types available:\cr
  - WRF (model post-process for METAR + INMET)\cr
+ - WRF-3 (model post-process for METAR + INMET for triple nested domains)\cr
  - WRF-Chem (model post-process for METAR, AQS in Brazil and AERONET)\cr
  - EXP (model post-process for one experimental site including PBL variables)\cr
- - METAR (download observations)\cr
+ - CAMx (post-process for triple tested domains)
+ - METAR (download METAR observations from ASOS)\cr
  - MET (evaluation of meteorology)\cr
+ - MET-3 (evaluation of meteorology for triple nested domains)\cr
  - AQ (evaluation of air quality)\cr
  - PSA (model post-processing with CDO for satellite evaluation)\cr
- - SAT (evaluation of precipitation using GPCP satellite)
+ - SAT (evaluation of precipitation using GPCP satellite)\cr
+ - AQS_BR (download data from air quality stations at Sao Paulo and Rio de Janeiro)\cr
+ - INMET (pre-processing of automatic and conventional meteorological data from INMET)\cr
+ - merge (merge INMET data and merge METAR data)\cr
 }
 \examples{
 temp <- file.path(tempdir(),"POST")

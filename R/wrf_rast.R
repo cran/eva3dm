@@ -65,7 +65,7 @@ wrf_rast <- function(file = file.choose(),
     POL   <- ncdf4::ncvar_get(wrf,name, ... )
   }
   if(verbose) cat(paste0('reading ',name,' from ', file,'\n'))      # nocov
-  if(verbose) cat(paste("creating RAST for",name,'\n'))             # nocov
+  if(verbose) cat(paste("creating SpatRaster for",name,'\n'))       # nocov
 
   if(missing(map)){                                                 # nocov
     coord_file = file                                               # nocov
@@ -191,12 +191,12 @@ wrf_rast <- function(file = file.choose(),
   }else{
     if(length(dim(POL)) == 4){ # nocov start
       if(missing(times)){
-        if(verbose) 
-          cat('eva3dm::wrf_rast support 3d SpatRaster, using all times and level',level,'\n')
+        if(verbose)
+          cat('eva3dm::wrf_rast support 3d SpatRaster, using all times and level',level,'\n') # see eva3dm::wrf_sds
         POL <- POL[,,level,,drop = TRUE]
       }else{
-        if(verbose) 
-          cat('eva3dm::wrf_rast support 3d SpatRaster, using all levels and time',level,'\n')
+        if(verbose)
+          cat('eva3dm::wrf_rast support 3d SpatRaster, using all levels and time',times,'\n') # see eva3dm::wrf_sds
         POL <- POL[,,,times,drop = TRUE]
       }
     }
@@ -238,7 +238,7 @@ wrf_rast <- function(file = file.choose(),
       if(verbose & missing(times))                                  # nocov
         cat('Time and variable',name,'dont match\n')                # nocov
       if(length(TIME) == 1 & nlyr(r) > 1 | !missing(times))         # nocov
-        terra::time(r) <- rep(TIME[1], nlyr(r))                     # nocov
+        terra::time(r) <- rep(TIME[times], nlyr(r))                 # nocov
     }
   }
 

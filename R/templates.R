@@ -17,13 +17,19 @@
 #'
 #' @note Templates types available:\cr
 #'  - WRF (model post-process for METAR + INMET)\cr
+#'  - WRF-3 (model post-process for METAR + INMET for triple nested domains)\cr
 #'  - WRF-Chem (model post-process for METAR, AQS in Brazil and AERONET)\cr
 #'  - EXP (model post-process for one experimental site including PBL variables)\cr
-#'  - METAR (download observations)\cr
+#'  - CAMx (post-process for triple tested domains)
+#'  - METAR (download METAR observations from ASOS)\cr
 #'  - MET (evaluation of meteorology)\cr
+#'  - MET-3 (evaluation of meteorology for triple nested domains)\cr
 #'  - AQ (evaluation of air quality)\cr
 #'  - PSA (model post-processing with CDO for satellite evaluation)\cr
-#'  - SAT (evaluation of precipitation using GPCP satellite)
+#'  - SAT (evaluation of precipitation using GPCP satellite)\cr
+#'  - AQS_BR (download data from air quality stations at Sao Paulo and Rio de Janeiro)\cr
+#'  - INMET (pre-processing of automatic and conventional meteorological data from INMET)\cr
+#'  - merge (merge INMET data and merge METAR data)\cr
 #'
 #' @examples
 #' temp <- file.path(tempdir(),"POST")
@@ -187,7 +193,7 @@ append = FALSE)
       cat(' folder ',paste0(root,'WRF/',case),': link wrf output files here!
  bash ',   paste0(root,'post-R_wrf.sh'),': post processing job script
  r-script',paste0(root,'extract_metar.R'),': source code to extract metar using eva3dm::extract_serie()
- r-script',paste0(root,'extract_inpet.R'),': source code to extract inmet using eva3dm::extract_serie()\n')
+ r-script',paste0(root,'extract_inmet.R'),': source code to extract inmet using eva3dm::extract_serie()\n')
   }
 
 ### SETUP of METEOROLOGY POST for 3 domains
@@ -659,8 +665,10 @@ if(template == 'METAR'){
              recursive = TRUE,
              showWarnings = FALSE)
 
-  cat('library("eva3dm")
+  cat(paste0('library("eva3dm")
 library("riem")
+
+setwd("',root,'")
 
 # set a folder to save the data start / end dates
 root_folder <- "METAR"
@@ -676,11 +684,16 @@ sites      <- extract_serie(filelist       = "wrfinput_d01",
                             return.nearest = T)
 
 for(site in row.names(sites)){
-  cat("downloading METAR from:",site,"...\\n")
+  cat("downloading METAR from:",site,grep(site,row.names(sites)),"of",length(row.names(sites)),"...\\n")
 
   DATA <- riem_measures(station    = site,
                         date_start = start_date,
-                        date_end   = end_date)
+                        date_end   = end_date,,
+                        latlon     = TRUE)
+  if(is.null(DATA)){
+    cat(\'skiping\', site,\'\\n\')
+    next
+  }
 
   DATA <- as.data.frame(DATA)
 
@@ -705,12 +718,12 @@ for(site in row.names(sites)){
 
 cat("download completed!")
 
-  ',
+  '),
 file = paste0(root,'download_METAR.R'),
 append = FALSE)
 
   if(verbose)
-    cat(' folder ',paste0(root),': copy wrfinput_d01 gere!
+    cat(' folder ',paste0(root),': copy wrfinput_d01 here!
  folder ',paste0(root,'METAR'),': destination folder
  r-script',paste0(root,'download_METAR.R'),': script that download metar data using riem package and information from eva3dm and wrfinput_d01 file\n')
 }
@@ -2122,8 +2135,312 @@ echo "done!"
       append = FALSE)
 
   if(verbose)
-    cat(' bash ',   paste0(root,'post-sate.sh'),': post processing for satellite evaluation using CDO\n')
+    cat(' bash ', paste0(root,'post-sate.sh'),': post processing for satellite evaluation using CDO\n')
 }
 
+
+### SETUP to download data from all stations from Qualar network/CETESB (Sao Paulo) and Monitor AR network (Rio de Janeiro) in Brazil
+if(template == 'AQS_BR'){
+  dir.create(path = paste0(root,'AQS_BR/'),
+             recursive = TRUE,
+             showWarnings = FALSE)
+
+  cat(paste0('library(qualR)
+## more info : https://docs.ropensci.org/qualR
+
+# SET the OUTPUT FOLDER
+folder <- "',paste0(root,'AQS_BR/'),'"
+dir.create(path = folder,showWarnings = FALSE,recursive = TRUE)
+
+## SAVE THE SITE-LIST
+cetesb_sites <- cetesb_aqs
+rio_sites    <- monitor_ar_aqs
+
+all_sites <- data.frame(lat = c(cetesb_sites$lat, rio_sites$lat),
+                        lon = c(cetesb_sites$lon, rio_sites$lon),
+                        row.names = c(cetesb_sites$name, rio_sites$name),
+                        stringsAsFactors = FALSE)
+
+saveRDS(all_sites,paste0(folder,"/site-list.Rds")) # in Sao Paulo and Rio de Janeiro states
+
+## to save QUALAR CREDENTIALS
+## https://qualar.cetesb.sp.gov.br/qualar
+# library(usethis)
+# edit_r_environ()
+# include user and password credentials on the file
+# QUALAR_USER="underschuch@gmail.com"
+# QUALAR_PASS="666"
+
+START <- "25/06/2018"
+END   <- "02/08/2018"
+
+## to download data for the state of Sao Paulo from CETESB"s Qualar network
+for(PAR in c("O3","NO","NO2","NOx","SO2","CO","MP2.5","MP10","TEMP","UR","VV","DV")){
+
+  # get parameters (pol and met) for each AQS
+  all_o3 <- lapply(cetesb_aqs$code, cetesb_retrieve_param,
+                   username   = Sys.getenv("QUALAR_USER"),
+                   password   = Sys.getenv("QUALAR_PASS"),
+                   parameters = PAR,
+                   start_date = START,
+                   end_date   = END)
+
+  # convert the list in data.frame
+  all_o3_csv <- do.call(rbind, all_o3) # columns 1:date 2:variable 3:station_name
+
+  # processing for eva3dm::eva()
+  output        <- data.frame(time = all_o3[[1]][,1]) # data is common for all stations
+  for(i in 1:length(all_o3)){
+    output      <- cbind(output,all_o3[[i]][,2])
+  }
+  names(output) <- c("date",unique(all_o3_csv[,3]))
+  saveRDS(output, paste0(folder,"/cetesb_",PAR,".Rds"))
+}
+
+cat("NOTE: DV (or wind direction) = 777 ou 666 are calm winds, use NA!\\n")
+
+## to download data for the state of Rio de Janeiro Monitor AR network
+for(PAR in c("O3","NO","NO2","NOx","SO2","CO","PM2_5","PM10","Temp","UR","Vel_Vento","Dir_Vento","Chuva")){
+
+  # get parameters (pol and met) for each AQS
+  rio_all <- lapply(rio_sites$code, monitor_ar_retrieve_param,
+                    parameters = PAR,
+                    start_date = START,
+                    end_date   = END)
+
+  # convert the list in data.frame
+  rio_csv <- do.call(rbind, rio_all) # columns 1:date 2:variable 3:station_name
+
+  # processing for eva3dm::eva()
+  output        <- data.frame(time = all_o3[[1]][,1]) # data is common for all stations
+  for(i in 1:length(all_o3)){
+    output      <- cbind(output,all_o3[[i]][,2])
+  }
+  names(output) <- c("date",unique(all_o3_csv[,3]))
+  saveRDS(output, paste0(folder,"/monitor_ar_",PAR,".Rds"))
+}
+
+#  to keep the same filename from CETESB data
+PAR = c("Vel_Vento","Dir_Vento","PM2_5","Temp")
+NEW = c("VV","DV","PM2.5","TEMP")
+for(i in 1:length(PAR)){
+  file.rename(from = paste0(folder,"/monitor_ar_",PAR[i],".Rds"),
+              to =   paste0(folder,"/monitor_ar_",NEW[i],".Rds"))
+}
+
+cat("NOTES:
+------
+CETESB QUALAR system describes midnight as 24:00, and the first hour of each day starts at 1:00. qualR transform it to get the time in 00-23 hour notation, for that reason you\'ll get NA at 00:00 of your first downloaded day. So, consider download one day before your study period.
+To pad-out with NA when there is a missing date, qualR tricks the date information, an assume it\'s on UTC (when in reality it\'s on America/Sao_Paulo time). This avoids problems with merging data frames and also with Daylight saving time (DST) issues. Beware of this,when dealing with study periods that include DST. It always a good idea, to double check by retrieving the suspicious date from CETESB QUALAR system.
+Take into account that in CETESB data, the hourly averaged is the mean until the hour. That is, a concentration value for 22:00 is the mean from 21:01 to 22:00.
+Consider the previous three points if you need to change from local time to UTC.
+Currently, MonitorAr only has data until March, 2021.
+")
+'),
+      file = paste0(root,'download_AQS_BR.R'),
+      append = FALSE)
+
+  if(verbose)
+    cat(' R-Script ',paste0(root,'download_AQS_BR.R'),': download data from Qualar network/CETESB (Sao Paulo) and Monitor AR network (Rio de Janeiro)\n')
+}
+
+### script to process INMET stations
+if(template == 'INMET'){
+  dir.create(path = paste0(root,'INMET/automatica/'),
+             recursive = TRUE,
+             showWarnings = FALSE)
+  dir.create(path = paste0(root,'INMET/convencional/'),
+             recursive = TRUE,
+             showWarnings = FALSE)
+
+  cat(paste0('library(eva3dm)
+
+folder <- "',paste0(root,'INMET/'),'"
+setwd(folder)
+
+files <- dir(path = "INMET/automatica/",pattern = ".csv",full.names = TRUE)
+
+for(i in 1:length(files)){
+  cat("* file",i,"of",length(files),files[i],"\\n")
+
+  header       <- read.csv2(files[i],nrows = 8,header = F,stringsAsFactors = F)
+  station_code <- as.character(header$V1[2])
+  station_code <- substr(x     = station_code,
+                         start = nchar(station_code) - 3,
+                         stop  = nchar(station_code))
+  cat("station code:",station_code,"\\n")
+
+  DATA <- read.csv2(file = files[i],skip = 9,dec = ",",stringsAsFactors = F,na.strings = "null")
+  if(nrow(DATA) == 0)
+    next
+  DATA <- DATA[-23]
+  names(DATA) <- c("date", "hour",
+                   "rain",
+                   "pres","press_mar","press_max","press_min",
+                   "rad",
+                   "cpu_temp",
+                   "temp","Dew_point","temp_max","temp_min","DP_max","DP_min",
+                   "Bateria",
+                   "RU_max","RU_min","RU",
+                   "WD","gust","WS")
+
+  datas <- as.POSIXct(x = paste(DATA$date,DATA$hour),tz = "GMT")
+
+  for(VAR in c("rain","temp","rad","RU","WS","WD")){
+    OBS   <- data.frame(site  = rep(station_code,length(datas)),
+                        date  = datas,
+                        par   = rep(VAR,length(datas)),
+                        value = as.numeric(DATA[,VAR]),
+                        stringsAsFactors = F)
+
+    filename <- paste0("INMET_",station_code,"_",VAR,".Rds")
+    cat("saving",VAR,":",filename,"...\\n")
+    saveRDS(OBS,filename)
+  }
+}
+'),
+      file = paste0(root,'process_INMET_auto.R'),
+      append = FALSE)
+
+  cat(paste0('library(eva3dm)
+
+folder <- "',paste0(root,'INMET/'),'"
+setwd(folder)
+
+files <- dir(path = "INMET/convencional/",pattern = ".csv",full.names = TRUE)
+
+for(i in 1:length(files)){
+  cat("* file",i,"of",length(files),files[i],"\\n")
+
+  header       <- read.csv2(files[i],nrows = 8,header = F,stringsAsFactors = F)
+  station_code <- as.character(header$V1[2])
+  station_code <- substr(x     = station_code,
+                         start = nchar(station_code) - 4,
+                         stop  = nchar(station_code))
+  cat("station code:",station_code,"\\n")
+
+  DATA <- read.csv2(file = files[i],skip = 9,dec = ",",stringsAsFactors = F,na.strings = "null")
+  if(nrow(DATA) == 0)
+    next
+  DATA <- DATA[-17]
+  names(DATA) <- c("dia", "hora",
+                   "nuvem_alta","nuvem_baixa","nuvem_media",
+                   "nebulosidade",
+                   "rain",
+                   "pres","press_mar",
+                   "temp","dew_point","dew_point",
+                   "RU","WD","WS","visibiliadade")
+
+  datas <- as.POSIXct(x = paste0(DATA$dia," ",as.numeric(DATA$hora)/100,":00"),tz = "GMT")
+
+  for(VAR in c("rain","temp","RU","WS","WD")){
+    OBS   <- data.frame(site  = rep(station_code,length(datas)),
+                        date  = datas,
+                        par   = rep(VAR,length(datas)),
+                        value = as.numeric(DATA[,VAR]),
+                        stringsAsFactors = F)
+
+    filename <- paste0("INMET_",station_code,"_",VAR,".Rds")
+    cat("saving",VAR,":",filename,"...\\n")
+    saveRDS(OBS,filename)
+  }
+}
+'),
+      file = paste0(root,'process_INMET_conv.R'),
+      append = FALSE)
+
+  if(verbose){
+    cat(' R-Script ', paste0(root,'process_INMET_auto.R'),': script to process INMET automatic stations\n')
+    cat(' R-Script ', paste0(root,'process_INMET_conv.R'),': script to process INMET conventional stations\n')
+    cat(' folder ',   paste0(root,'INMET/automatica/'),   ': place INMET data from automatic stations \n')
+    cat(' folder ',   paste0(root,'INMET/convencional/'), ': place INMET data from conventional stations \n')
+    cat(' folder ',   paste0(root,'INMET/'),              ': output folder\n')
+  }
+}
+
+### script to merge INMET stations in one file, and merge METAR stations in one file
+if(template == 'merge'){
+  dir.create(path = paste0(root,'INMET/'),
+             recursive = TRUE,
+             showWarnings = FALSE)
+  dir.create(path = paste0(root,'METAR/'),
+             recursive = TRUE,
+             showWarnings = FALSE)
+
+  cat(paste0('library(eva3dm)
+
+cat("mergin all INMET data\\n")
+
+output_prefix <- "INMET_all_stations"
+
+data_folder <- "',paste0(root,'INMET/'),'"
+
+for(VAR in c("rain","temp","rad","RU","WS","WD")){
+  output_name <- paste0(output_prefix,"_",VAR,".Rds")
+  files <- dir(path = data_folder,pattern = VAR,full.names = T)
+  files <- grep(files,pattern = output_prefix,value = TRUE,invert = TRUE)
+
+  obs   <- data.frame(date = as.POSIXct("1666-01-01", tz = "GMT"),stringsAsFactors = F)
+  for(i in 1:length(files)){
+    cat("opening",files[i],i,"of",length(files),"\\n")
+    new   <- readRDS(files[i])
+    site  <- new$site[1]
+    new   <- new[,c(2,4)]
+    names(new) <- c("date",site)
+    new <- new[!duplicated(new$date), ]
+    obs <- merge(obs, new, by = "date", all = TRUE)
+  }
+  obs <- obs[-1,]
+  cat("OUPUT:",paste0(data_folder,"/",output_name),"\\n")
+  saveRDS(object = obs,file = paste0(data_folder,"/",output_name))
+}
+'),
+      file = paste0(root,'merge_INMET.R'),
+      append = FALSE)
+
+  cat(paste0('library(eva3dm)
+
+cat("mergin all METAR data\\n")
+
+output_prefix <- "METAR_all_stations"
+
+data_folder <- "',paste0(root,'METAR/'),'"
+
+files <- dir(path = data_folder,pattern = "METAR",full.names = T)
+files <- grep(files,pattern = output_prefix,value = TRUE,invert = TRUE)
+
+for(VAR in c("T2","RH","WS","WD","rain")){
+  output_name <- paste0(output_prefix,"_",VAR,".Rds")
+
+  obs   <- data.frame(date = as.POSIXct("1666-01-01", tz = "GMT"),stringsAsFactors = F)
+  for(i in 1:length(files)){
+    cat("opening",files[i],i,"of",length(files),"\\n")
+
+    new   <- readRDS(files[i])
+    new   <- new[!duplicated(new$date), ]
+    site  <- new$site[1]
+    if(!VAR %in% names(new))
+      next
+    new   <- new[,c("date",VAR)]
+    names(new) <- c("date",site)
+
+    obs <- merge(obs, new, by = "date", all = TRUE)
+  }
+  obs <- obs[-1,]
+  cat("OUTPUT:",paste0(data_folder,"/",output_name),"\\n")
+  saveRDS(object = obs,file = paste0(data_folder,"/",output_name))
+}
+
+'),
+      file = paste0(root,'merge_METAR.R'),
+      append = FALSE)
+
+  if(verbose){
+    cat(' R-Script ', paste0(root,'merge_INMET.R'),': script to merge INMET observations\n')
+    cat(' R-Script ', paste0(root,'merge_METAR.R'),': script to merge METAR observations\n')
+    cat(' folder ',   paste0(root,'INMET/'),       ': place all INMET data (input and output)\n')
+    cat(' folder ',   paste0(root,'METAR/'),       ': place all METAR data (input and output)\n')
+  }
+}
 
 }

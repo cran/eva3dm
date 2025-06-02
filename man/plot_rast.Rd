@@ -21,6 +21,7 @@ plot_rast(
   ndig = 2,
   log = FALSE,
   range,
+  scale,
   min = -3,
   max,
   unit,
@@ -60,11 +61,13 @@ plot_rast(
 
 \item{range}{range of original values to plot}
 
-\item{min}{minimum log value for log scale (defoul is -3)}
+\item{scale}{variable multiplier (not affect min/max/range)}
+
+\item{min}{minimum log value for log scale (default is -3)}
 
 \item{max}{maximum log value for log scale}
 
-\item{unit}{title for color bar (defoult is )}
+\item{unit}{title for color bar}
 
 \item{...}{arguments to be passing to terra::plot}
 }
@@ -75,7 +78,7 @@ No return value
 Custon plot for SpatRaster (terra R-package) object based on terra package
 }
 \note{
-color scale includes: 'eva3r' (default), 'eva4', 'blues' and 'diff'
+color scales including: 'eva3', 'eva4', 'blues', 'diff', and 'rain'. Also reverse version with addition of a r ('eva3r' is the default).
 }
 \examples{
 wrf <- paste(system.file("extdata", package = "eva3dm"),

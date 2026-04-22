@@ -17,7 +17,9 @@ plot_rast(
   grid = FALSE,
   grid_int = int,
   grid_col = "#666666",
+  grid_lwd = 1.2,
   add_range = FALSE,
+  show.mean = TRUE,
   ndig = 2,
   log = FALSE,
   range,
@@ -25,6 +27,8 @@ plot_rast(
   min = -3,
   max,
   unit,
+  mask,
+  fill = FALSE,
   ...
 )
 }
@@ -53,7 +57,11 @@ plot_rast(
 
 \item{grid_col}{color for grid lines}
 
+\item{grid_lwd}{lwd for the grid lines}
+
 \item{add_range}{add legend with max, average and min r values}
+
+\item{show.mean}{show the average on legend, default TRUE}
 
 \item{ndig}{number of digits for legend_range}
 
@@ -69,6 +77,10 @@ plot_rast(
 
 \item{unit}{title for color bar}
 
+\item{mask}{optional SpatVector to mask the plot}
+
+\item{fill}{filling NAs}
+
 \item{...}{arguments to be passing to terra::plot}
 }
 \value{
@@ -78,7 +90,7 @@ No return value
 Custon plot for SpatRaster (terra R-package) object based on terra package
 }
 \note{
-color scales including: 'eva3', 'eva4', 'blues', 'diff', and 'rain'. Also reverse version with addition of a r ('eva3r' is the default).
+color scales including: 'eva3', 'eva4', 'blues', 'diff', 'rain', 'pur', 'blackpur', 'acid', and 'regime'. Also reverse version with addition of a r ('eva3r' is the default).
 }
 \examples{
 wrf <- paste(system.file("extdata", package = "eva3dm"),

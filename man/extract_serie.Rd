@@ -15,10 +15,7 @@ extract_serie(
   return.nearest = FALSE,
   fast = FALSE,
   use_ij = FALSE,
-  latitude = "XLAT",
-  longitude = "XLONG",
-  use_TFLAG = FALSE,
-  use_datesec = FALSE,
+  model = "WRF",
   id = "id",
   remove_ch = FALSE,
   verbose = TRUE
@@ -31,9 +28,16 @@ extract_serie(
 
 \item{variable}{variable name}
 
-\item{field}{'4d' (default), '3d', '2d' or '2dz' see notes}
+\item{field}{dimension of the variable, '4d' (default), '2dz', '2dz', '2d' or 'xyzt', 'xyz', 'xyz', and 'xy' see notes
+\tabular{lll}{
+  \strong{Field}\tab \strong{Dimensions}\tab \strong{Example} \cr
+  3dt  \tab xyzt \tab WRF dimensions for 3D array with multiple times\cr
+  2dt  \tab xyt  \tab WRF dimensions for 2D array with multiple times \cr
+  2dz  \tab xyz  \tab WRF dimensions for 3D array with single time\cr
+  2d   \tab xy   \tab WRF dimensions for 2D array with single time\cr
+}}
 
-\item{level}{model level to be extracted}
+\item{level}{model level (index) to be extracted}
 
 \item{prefix}{to output file, default is serie}
 
@@ -45,13 +49,7 @@ extract_serie(
 
 \item{use_ij}{logical, use i and j from input instead of calculate}
 
-\item{latitude}{name of latitude coordinate variable in the netcdf}
-
-\item{longitude}{name of longitude coordinate variable in the netcdf}
-
-\item{use_TFLAG}{use the variable TFLAG (CMAQ / smoke) instead of Times (WRF)}
-
-\item{use_datesec}{use the variable date and datesec (WACCM / CAM-Chem) instead of Times (WRF)}
+\item{model}{"WRF" (default), "CAMx" (CAMx, CMAQ and smoke files), and "WACCM" (WACCM and CAM-Chem)}
 
 \item{id}{name of the column with station names, if point is a SpatVector (points) from terra package}
 
@@ -66,31 +64,48 @@ No return value
 Read and extract data from a list of wrf output files and a table of lat/lon points based on the distance of the points and the center of model grid points, points outside the domain (and points on domain boundary) are not extracted.
 }
 \note{
-The field argument '4d' or '2dz' is used to read a 4d/3d variable droping the 3rd dimention (z).
+The field argument '4d' or '2dz' is used to read a 4d/3d variable droping the 3rd dimension (z), this should be based how ncdf4 R-package reads the model output.
 
 new = TRUE create a new file, new = FALSE append the data in a old file, and new = 'check' check if the file exist and append if the file exist and create if the file doesnt exist
 
-FOR CAMx time-series, use the options: use_TFLAG=T, latitude='latitude', longitude='longitude', new=T
+The option field '3d' was removed, a new option should be used instead (2dt or 2dz).
 
-FOR WACCM time-series, use the options: use_datesec=T, latitude='lat', longitude='lon', new=T
-
-The site-list of two global data-sets (METAR and AERONET) are provided on examples and site-list for stations on Brazil (INMET and Air Quality stations).
+The site-list of two global data-sets (METAR/ISD and AERONET) are provided on examples and site-list for stations on Brazil (INMET and Air Quality stations). Site-lists for other regions (US, Canada, Europa, etc) are provided as additional examples.
 }
 \examples{
 cat('Example 1: METAR site list\n')
 sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_METAR.Rds"))
 
 cat('Example 2: Integrated Surface Dataset (ISD) site list\n')
+# row.names are a combination of State Code,	County Code	and Site Number (2,3 and 4 digits)
 sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_ISD.Rds"))
 
 cat('Example 4: AERONET site list\n')
 sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_AERONET.Rds"))
 
-cat('Example 5: list of INMET stations on Brazil\n')
+cat('Example 5: list of INMET stations in Brazil\n')
 sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_INMET.Rds"))
 
-cat('Example 6: list of Air Quality stations on Brazil\n')
+cat('Example 6: list of Air Quality stations in Brazil\n')
 sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_AQ_BR.Rds"))
+
+cat('Example 7: list of AQM stations in US\n')
+sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_AQS.Rds"))
+
+cat('Example 8: list of CASTNET stations in rural areas of US/Canada\n')
+sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_CASTNET.Rds"))
+
+cat('Example 9: list of Longterm European Program (EMEP) stations\n')
+sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_EMEP.Rds"))
+
+cat('Example 10: list of FLUXNET stations\n')
+sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_FLUXNET.Rds"))
+
+cat('Example 11: list of IMPROVE stations\n')
+sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_IMPROVE.Rds"))
+
+cat('Example 12: list of TOAR stations\n')
+sites <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_TOAR.Rds"))
 
 files    <- dir(path = system.file("extdata",package="eva3dm"),
                 pattern = 'wrf.day',

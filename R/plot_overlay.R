@@ -16,6 +16,7 @@
 #' @param add add to existing plot
 #' @param plg list of parameters passed to terra::add_legend
 #' @param pax list of parameters passed to graphics::axis
+#' @param unit used title in terra::add_legend
 #' @param expand to expand the plot region
 #' @param ... arguments to be passing to terra::plot
 #'
@@ -47,15 +48,22 @@ overlay <- function(p,z,col,col2,
                     lim      = range(z, na.rm = TRUE),
                     symmetry = TRUE,
                     pch      = 19,
-                    pch2     = 1,
+                    pch2     = NA,
                     cex      = 1.0,
                     cex2     = 1.2 * cex,
                     outside  = TRUE,
                     add      = FALSE,
                     plg      = list(tic = 'none',shrink=1.00),
                     pax      = list(),
+                    unit,
                     expand   = 1.15,
                     ...){
+
+  if(is.na(pch2) && pch == 19)
+    pch2 = 1                      # nocov
+
+  if(!missing(unit))
+    plg = c(plg,list(title = unit)) # nocov
 
   if(missing(p))
     stop('p is missing') # nocov

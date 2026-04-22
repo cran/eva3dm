@@ -15,7 +15,7 @@
 #' @param verbose display additional information
 #' @param ... extra arguments passed to ncdf4::ncvar_get
 #'
-#' @return SpatRaster object (terra package)
+#' @return SpatRaster object (from terra package)
 #'
 #' @import terra ncdf4
 #' @importFrom utils menu
@@ -235,8 +235,6 @@ wrf_rast <- function(file = file.choose(),
     if(length(TIME) == nlyr(r)){
       terra::time(r) <- TIME
     }else{
-      if(verbose & missing(times))                                  # nocov
-        cat('Time and variable',name,'dont match\n')                # nocov
       if(length(TIME) == 1 & nlyr(r) > 1 | !missing(times))         # nocov
         terra::time(r) <- rep(TIME[times], nlyr(r))                 # nocov
     }

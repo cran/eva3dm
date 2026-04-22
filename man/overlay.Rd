@@ -12,13 +12,14 @@ overlay(
   lim = range(z, na.rm = TRUE),
   symmetry = TRUE,
   pch = 19,
-  pch2 = 1,
+  pch2 = NA,
   cex = 1,
   cex2 = 1.2 * cex,
   outside = TRUE,
   add = FALSE,
   plg = list(tic = "none", shrink = 1),
   pax = list(),
+  unit,
   expand = 1.15,
   ...
 )
@@ -51,6 +52,8 @@ overlay(
 \item{plg}{list of parameters passed to terra::add_legend}
 
 \item{pax}{list of parameters passed to graphics::axis}
+
+\item{unit}{used title in terra::add_legend}
 
 \item{expand}{to expand the plot region}
 

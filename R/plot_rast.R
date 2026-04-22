@@ -14,7 +14,9 @@
 #' @param grid add grid (graticule style)
 #' @param grid_int interval of grid lines
 #' @param grid_col color for grid lines
+#' @param grid_lwd lwd for the grid lines
 #' @param add_range add legend with max, average and min r values
+#' @param show.mean show the average on legend, default TRUE
 #' @param ndig number of digits for legend_range
 #' @param range range of original values to plot
 #' @param scale variable multiplier (not affect min/max/range)
@@ -22,13 +24,15 @@
 #' @param min minimum log value for log scale (default is -3)
 #' @param max maximum log value for log scale
 #' @param unit title for color bar
+#' @param mask optional SpatVector to mask the plot
+#' @param fill filling NAs
 #' @param ... arguments to be passing to terra::plot
 #'
 #' @return No return value
 #'
 #' @import terra
 #'
-#' @note color scales including: 'eva3', 'eva4', 'blues', 'diff', and 'rain'. Also reverse version with addition of a r ('eva3r' is the default).
+#' @note color scales including: 'eva3', 'eva4', 'blues', 'diff', 'rain', 'pur', 'blackpur', 'acid', and 'regime'. Also reverse version with addition of a r ('eva3r' is the default).
 #'
 #' @export
 #'
@@ -52,7 +56,9 @@ plot_rast <- function(r,
                       grid = FALSE,
                       grid_int = int,
                       grid_col = "#666666",
+                      grid_lwd = 1.2,
                       add_range = FALSE,
+                      show.mean = TRUE,
                       ndig = 2,
                       log = FALSE,
                       range,
@@ -60,6 +66,8 @@ plot_rast <- function(r,
                       min = -3,
                       max,
                       unit,
+                      mask,
+                      fill = FALSE,
                       ...){
 
   if(missing(r))
@@ -78,6 +86,9 @@ plot_rast <- function(r,
     unit <- terra::units(r)[1]
     r = scale * r
   }
+
+  if(fill)
+    r <- gap_fill(r)
 
   if(!missing(range) & !log){
     r2 <- r
@@ -207,6 +218,110 @@ plot_rast <- function(r,
                    "#2535B7","#2230B5","#1E2BB3","#1B26B0","#1821AE",
                    "#151CAC","#1117A9","#0E12A7","#0B0DA5","#0808A3"))
 
+  if(color[1] == 'pur')
+    # red-purple - blue purple - gray - white
+    color <- rev(c("#6E228C","#742A93","#7A339B","#813CA2","#8745AA",
+                   "#8E4EB2","#9457B9","#9B60C1","#A169C9","#A772D0",
+                   "#AB79D6","#A274D2","#9970CE","#916CC9","#8868C5",
+                   "#7F64C1","#7760BD","#6E5BB9","#6557B5","#5D53B1",
+                   "#5A53B1","#615AB8","#6861BF","#6F68C6","#766FCD",
+                   "#7D76D5","#847DDC","#8B84E3","#928BEA","#9992F1",
+                   "#9E97F0","#A19BEB","#A59FE5","#A8A4E0","#ABA8DA",
+                   "#AFACD5","#B2B0CF","#B6B4CA","#B9B8C4","#BDBDBF",
+                   "#C3C3C3","#C9C9C9","#D0D0D0","#D7D7D7","#DDDDDD",
+                   "#E4E4E4","#EBEBEB","#F1F1F1","#F8F8F8","#FFFFFF"))
+
+  if(color[1] == 'purr')
+    # red-purple - blue purple - gray - white reversed
+    color <- c("#6E228C","#742A93","#7A339B","#813CA2","#8745AA",
+               "#8E4EB2","#9457B9","#9B60C1","#A169C9","#A772D0",
+               "#AB79D6","#A274D2","#9970CE","#916CC9","#8868C5",
+               "#7F64C1","#7760BD","#6E5BB9","#6557B5","#5D53B1",
+               "#5A53B1","#615AB8","#6861BF","#6F68C6","#766FCD",
+               "#7D76D5","#847DDC","#8B84E3","#928BEA","#9992F1",
+               "#9E97F0","#A19BEB","#A59FE5","#A8A4E0","#ABA8DA",
+               "#AFACD5","#B2B0CF","#B6B4CA","#B9B8C4","#BDBDBF",
+               "#C3C3C3","#C9C9C9","#D0D0D0","#D7D7D7","#DDDDDD",
+               "#E4E4E4","#EBEBEB","#F1F1F1","#F8F8F8","#FFFFFF")
+
+  if(color[1] == 'blackpur')
+    # diff version of pur, instead of change hue, use black
+    color <- rev(c("#000000","#07060E","#0E0D1C","#15132A","#1C1A39",
+                   "#232147","#2B2755","#322E64","#393472","#403B80",
+                   "#47428E","#4F489D","#564FAB","#5C55B3","#615AB8",
+                   "#6760BE","#6C65C4","#726BC9","#7770CF","#7D76D5",
+                   "#837CDA","#8881E0","#8E87E5","#938CEB","#9992F1",
+                   "#9D96F1","#A09AED","#A29DE8","#A5A0E4","#A8A4E0",
+                   "#ABA7DB","#AEAAD7","#B0AED2","#B3B1CE","#B6B4CA",
+                   "#B9B8C5","#BBBBC1","#BFBFBF","#C4C4C4","#C9C9C9",
+                   "#CFCFCF","#D4D4D4","#D9D9D9","#DFDFDF","#E4E4E4",
+                   "#E9E9E9","#EFEFEF","#F4F4F4","#F9F9F9","#FFFFFF"))
+
+  if(color[1] == 'blackpurr')
+    # diff version of purr, instead of change hue, use black
+    color <- c("#000000","#07060E","#0E0D1C","#15132A","#1C1A39",
+               "#232147","#2B2755","#322E64","#393472","#403B80",
+               "#47428E","#4F489D","#564FAB","#5C55B3","#615AB8",
+               "#6760BE","#6C65C4","#726BC9","#7770CF","#7D76D5",
+               "#837CDA","#8881E0","#8E87E5","#938CEB","#9992F1",
+               "#9D96F1","#A09AED","#A29DE8","#A5A0E4","#A8A4E0",
+               "#ABA7DB","#AEAAD7","#B0AED2","#B3B1CE","#B6B4CA",
+               "#B9B8C5","#BBBBC1","#BFBFBF","#C4C4C4","#C9C9C9",
+               "#CFCFCF","#D4D4D4","#D9D9D9","#DFDFDF","#E4E4E4",
+               "#E9E9E9","#EFEFEF","#F4F4F4","#F9F9F9","#FFFFFF")
+
+  if(color[1] == 'acid')
+    # diff version of pur, instead of change hue go for alien-blood green
+    color <- c("#35BD13","#3AC119","#3FC51F","#44CA25","#49CE2C",
+               "#4FD232","#54D738","#59DB3F","#5EE045","#63E44B",
+               "#67E452","#66D55C","#64C666","#62B66F","#61A779",
+               "#5F9782","#5D888C","#5C7996","#5A699F","#585AA9",
+               "#5A53B1","#615AB8","#6861BF","#6F68C6","#766FCD",
+               "#7D76D5","#847DDC","#8B84E3","#928BEA","#9992F1",
+               "#9E97F0","#A19BEB","#A59FE5","#A8A4E0","#ABA8DA",
+               "#AFACD5","#B2B0CF","#B6B4CA","#B9B8C4","#BDBDBF",
+               "#C3C3C3","#C9C9C9","#D0D0D0","#D7D7D7","#DDDDDD",
+               "#E4E4E4","#EBEBEB","#F1F1F1","#F8F8F8","#FFFFFF")
+
+  if(color[1] == 'acidr')
+    # diff version of purr, instead of change hue go for alien-blood green
+    color <- rev(c("#35BD13","#3AC119","#3FC51F","#44CA25","#49CE2C",
+                   "#4FD232","#54D738","#59DB3F","#5EE045","#63E44B",
+                   "#67E452","#66D55C","#64C666","#62B66F","#61A779",
+                   "#5F9782","#5D888C","#5C7996","#5A699F","#585AA9",
+                   "#5A53B1","#615AB8","#6861BF","#6F68C6","#766FCD",
+                   "#7D76D5","#847DDC","#8B84E3","#928BEA","#9992F1",
+                   "#9E97F0","#A19BEB","#A59FE5","#A8A4E0","#ABA8DA",
+                   "#AFACD5","#B2B0CF","#B6B4CA","#B9B8C4","#BDBDBF",
+                   "#C3C3C3","#C9C9C9","#D0D0D0","#D7D7D7","#DDDDDD",
+                   "#E4E4E4","#EBEBEB","#F1F1F1","#F8F8F8","#FFFFFF"))
+
+  if(color[1] == 'regime')
+    # based on eva colors, but separation for green using gray
+    color <- c("#579234","#5B9535","#5F9937","#639D39","#67A13B",
+               "#6BA53D","#6FA93F","#73AD41","#77B143","#7CB545",
+               "#80B947","#84BC49","#88C04B","#8CC44D","#90C84E",
+               "#94CC50","#98D052","#9DD454","#A1D856","#9ECD5D",
+               "#99BF66","#95B16E","#90A377","#8C957F","#888888",
+               "#625BB8","#655EBB","#6861BE","#6B64C1","#6D66C4",
+               "#7069C7","#736CC9","#766FCC","#7871CF","#7B74D2",
+               "#7E77D5","#8079D7","#827BD9","#847DDB","#867FDE",
+               "#8881E0","#8B84E2","#8D86E4","#8F88E6","#918AE9",
+               "#938CEB","#958EED","#9790EF","#9992F1","#9C95F4")
+
+  if(color[1] == 'regimer')
+    # based on eva colors, but separation for green using gray
+    color <- rev(c("#579234","#5B9535","#5F9937","#639D39","#67A13B",
+                   "#6BA53D","#6FA93F","#73AD41","#77B143","#7CB545",
+                   "#80B947","#84BC49","#88C04B","#8CC44D","#90C84E",
+                   "#94CC50","#98D052","#9DD454","#A1D856","#9ECD5D",
+                   "#99BF66","#95B16E","#90A377","#8C957F","#888888",
+                   "#625BB8","#655EBB","#6861BE","#6B64C1","#6D66C4",
+                   "#7069C7","#736CC9","#766FCC","#7871CF","#7B74D2",
+                   "#7E77D5","#8079D7","#827BD9","#847DDB","#867FDE",
+                   "#8881E0","#8B84E2","#8D86E4","#8F88E6","#918AE9",
+                   "#938CEB","#958EED","#9790EF","#9992F1","#9C95F4"))
+
   # nocov end
   e_o     <- ext(r)
   Points  <- vect(cbind(x = e_o[1:2], y = e_o[3:4]),
@@ -253,15 +368,19 @@ plot_rast <- function(r,
       terra::lines(terra::graticule(lon = seq(-180,180,by = grid_int),
                                     lat = vet_lat,
                                     crs = terra::crs(r,proj=TRUE)),
-                   lty = 3, col = grid_col,lwd = 1.2)
+                   lty = 3, col = grid_col,lwd = grid_lwd)
     }
     if(add_range)
-      legend_range(r,dig = c(ndig,ndig,ndig))
+      legend_range(r,dig = c(ndig,ndig,ndig), show.mean = show.mean)
     terra::add_box()
   }
 
   if(proj){
-    r <- project(r,"+proj=longlat +datum=WGS84 +no_defs")
+    r2 <- project(r2,"+proj=longlat +datum=WGS84 +no_defs")
+  }
+  if(!missing(mask)){
+    mask_proj  <- terra::project(mask,r2)          # nocov
+    r2         <- terra::mask(r2,mask = mask_proj) # nocov
   }
 
   if(missing(unit)){
@@ -407,4 +526,15 @@ custom_approxfun <- function(x, y, method = "linear", rule = 1) {
   }
 
   return(interpolate)
+}
+
+gap_fill <- function(r){
+  to_fill <- any(is.na(values(r)))
+  w       <- 1
+  while(to_fill) {
+    w       <- w + 2
+    r       <- focal(r, w = w, fun = mean, na.policy = "only", na.rm = T)
+    to_fill <- any(is.na(values(r)))
+  }
+  return(r)
 }

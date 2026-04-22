@@ -11,6 +11,7 @@
 #' @param lim_r range of values for relative scale
 #' @param scale variable multiplier for absolute difference
 #' @param unit annotation for units
+#' @param fill filling NAs
 #' @param ... arguments to be passing to plot_raster
 #'
 #' @return No return value
@@ -29,11 +30,17 @@
 #' plot_diff(A,B,int = 2)
 
 plot_diff <- function(x,y,col,
-                      absolute = TRUE,
-                      relative = TRUE,
+                      absolute = FALSE,
+                      relative = FALSE,
                       lim_a = NA, lim_r = NA, scale,
                       unit = c(units(x),expression("%")),
+                      fill = FALSE,
                       ...){
+
+  if(absolute == FALSE & relative == FALSE){
+    absolute = TRUE
+    relative = TRUE
+  }
 
   if(missing(col))
     col <- c("#1B2C62","#204385","#265CA9","#4082C2",
@@ -54,10 +61,14 @@ plot_diff <- function(x,y,col,
 
     plot_rast(diff, color = col,range = lim_a, scale = scale,
               plg = list(tic = 'none', shrink=0.98, title = unit[1]),
-              ...)
+              fill = fill, ...)
   }
   if(relative){
-    rel  <- 100 * diff / (y + 0.00000000001)
+    if(fill){
+      rel  <- 100 * diff / y                      # nocov
+    }else{
+      rel  <- 100 * diff / (y + 0.00000000001)
+    }
 
     if(is.na(lim_r))
       lim_r = as.numeric(global(rel,'range',na.rm = TRUE))
@@ -67,6 +78,6 @@ plot_diff <- function(x,y,col,
 
     plot_rast(rel, color = col,range = lim_r,
               plg = list(tic = 'none', shrink=0.98, title = unit[2]),
-              ...)
+              fill = fill, ... )
   }
 }

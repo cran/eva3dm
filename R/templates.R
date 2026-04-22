@@ -3,7 +3,27 @@
 #' @description Create templates of code (r-scripts and bash job-submission script) to read, post-process and evaluate model results.
 #'
 #' @param root directory to create the template
-#' @param template template type (see notes)
+#' @param template Character; One of  of the following:
+#' \tabular{lllll}{
+#'   \strong{argument}\tab \strong{TYPE}\tab \strong{MODEL/OBS}\tab \strong{OBSERVATION}\cr
+#'   WRF\tab post-process \tab WRF \tab METAR and INMET\cr
+#'   WRF-3\tab post-process \tab WRF triple nested \tab METAR\cr
+#'   WRF-Chem\tab post-process \tab WRF-Chem \tab METAR, AQS in Brazil and AERONET\cr
+#'   EXP\tab post-process \tab WRF-Chem \tab METAR, PBL variables and composition\cr
+#'   CAMX\tab post-process \tab CAMx \tab AERONET \cr
+#'   CAMX-3\tab post-process \tab CAMx triple nested \tab AERONET \cr
+#'   NCO\tab post-process \tab WRF \tab Satellite\cr
+#'   terra\tab post-process \tab WRF \tab Satellite\cr
+#'   SAT\tab evaluation \tab WRF \tab Satellite (GPCP)\cr
+#'   MET\tab evaluation \tab WRF \tab METAR\cr
+#'   MET-3\tab evaluation \tab WRF triple nested \tab METAR\cr
+#'   AQ\tab evaluation \tab WRF or CAMx \tab O3, Max O3 and PM2.5\cr
+#'   AQS_BR\tab download \tab observations \tab AQS in Brazil for SP and RJ\cr
+#'   METAR\tab downlaad \tab observations \tab METAR from ASOS\cr
+#'   INMET\tab pre-processing \tab observations \tab INMET (automatic and conventional)\cr
+#'   merge\tab pre-processing \tab observations \tab merge INMET (automatic and conventional)\cr
+#'   ISD\tab pre-processing \tab observations \tab METAR from ISD\cr
+#'}
 #' @param case case to be evaluated
 #' @param env name of the conda environment
 #' @param scheduler job scheduler used (SBATCH or PBS)
@@ -14,22 +34,6 @@
 #' @return no value returned, create folders and other template scripts
 #'
 #' @export
-#'
-#' @note Templates types available:\cr
-#'  - WRF (model post-process for METAR + INMET)\cr
-#'  - WRF-3 (model post-process for METAR + INMET for triple nested domains)\cr
-#'  - WRF-Chem (model post-process for METAR, AQS in Brazil and AERONET)\cr
-#'  - EXP (model post-process for one experimental site including PBL variables)\cr
-#'  - CAMx (post-process for triple tested domains)
-#'  - METAR (download METAR observations from ASOS)\cr
-#'  - MET (evaluation of meteorology)\cr
-#'  - MET-3 (evaluation of meteorology for triple nested domains)\cr
-#'  - AQ (evaluation of air quality)\cr
-#'  - PSA (model post-processing with CDO for satellite evaluation)\cr
-#'  - SAT (evaluation of precipitation using GPCP satellite)\cr
-#'  - AQS_BR (download data from air quality stations at Sao Paulo and Rio de Janeiro)\cr
-#'  - INMET (pre-processing of automatic and conventional meteorological data from INMET)\cr
-#'  - merge (merge INMET data and merge METAR data)\cr
 #'
 #' @examples
 #' temp <- file.path(tempdir(),"POST")
@@ -94,24 +98,24 @@ date
 
 echo \'extracting METAR time-series...\'
 
-Rscript extract_metar.R $dir T2     3d &
+Rscript extract_metar.R $dir T2     2dt &
 Rscript extract_metar.R $dir P      4d &
-Rscript extract_metar.R $dir Q2     3d &
-Rscript extract_metar.R $dir U10    3d &
-Rscript extract_metar.R $dir V10    3d &
-Rscript extract_metar.R $dir RAINC  3d &
-Rscript extract_metar.R $dir RAINNC 3d &
+Rscript extract_metar.R $dir Q2     2dt &
+Rscript extract_metar.R $dir U10    2dt &
+Rscript extract_metar.R $dir V10    2dt &
+Rscript extract_metar.R $dir RAINC  2dt &
+Rscript extract_metar.R $dir RAINNC 2dt &
 
 echo \'extracting INMET time-series...\'
 
-Rscript extract_inmet.R $dir T2      3d &
-Rscript extract_inmet.R $dir Q2      3d &
-Rscript extract_inmet.R $dir U10     3d &
-Rscript extract_inmet.R $dir V10     3d &
-Rscript extract_inmet.R $dir RAINNC  3d &
-Rscript extract_inmet.R $dir RAINC   3d &
+Rscript extract_inmet.R $dir T2      2dt &
+Rscript extract_inmet.R $dir Q2      2dt &
+Rscript extract_inmet.R $dir U10     2dt &
+Rscript extract_inmet.R $dir V10     2dt &
+Rscript extract_inmet.R $dir RAINNC  2dt &
+Rscript extract_inmet.R $dir RAINC   2dt &
 Rscript extract_inmet.R $dir P       4d &
-Rscript extract_inmet.R $dir SWDOWN  3d &
+Rscript extract_inmet.R $dir SWDOWN  2dt &
 
 wait
 
@@ -216,13 +220,13 @@ date
 
 echo \'extracting METAR time-series...\'
 
-Rscript extract_metar.R $dir T2     3d &
+Rscript extract_metar.R $dir T2     2dt &
 Rscript extract_metar.R $dir P      4d &
-Rscript extract_metar.R $dir Q2     3d &
-Rscript extract_metar.R $dir U10    3d &
-Rscript extract_metar.R $dir V10    3d &
-Rscript extract_metar.R $dir RAINC  3d &
-Rscript extract_metar.R $dir RAINNC 3d &
+Rscript extract_metar.R $dir Q2     2dt &
+Rscript extract_metar.R $dir U10    2dt &
+Rscript extract_metar.R $dir V10    2dt &
+Rscript extract_metar.R $dir RAINC  2dt &
+Rscript extract_metar.R $dir RAINNC 2dt &
 
 wait
 
@@ -315,20 +319,20 @@ date
 
 echo \'extracting METAR time-series ...\'
 
-Rscript extract_metar.R $dir T2     3d &
+Rscript extract_metar.R $dir T2     2dt &
 Rscript extract_metar.R $dir P      4d &
-Rscript extract_metar.R $dir Q2     3d &
-Rscript extract_metar.R $dir U10    3d &
-Rscript extract_metar.R $dir V10    3d &
-Rscript extract_metar.R $dir RAINC  3d &
-Rscript extract_metar.R $dir RAINNC 3d &
+Rscript extract_metar.R $dir Q2     2dt &
+Rscript extract_metar.R $dir U10    2dt &
+Rscript extract_metar.R $dir V10    2dt &
+Rscript extract_metar.R $dir RAINC  2dt &
+Rscript extract_metar.R $dir RAINNC 2dt &
 
 echo \'extracting AQ time-series for meteorology ...\'
-Rscript extract_aq.R $dir T2 3d  &
-Rscript extract_aq.R $dir Q2 3d  &
+Rscript extract_aq.R $dir T2 2dt  &
+Rscript extract_aq.R $dir Q2 2dt  &
 Rscript extract_aq.R $dir P      &
-Rscript extract_aq.R $dir U10 3d &
-Rscript extract_aq.R $dir V10 3d &
+Rscript extract_aq.R $dir U10 2dt &
+Rscript extract_aq.R $dir V10 2dt &
 
 echo \'extracting AQ time-series for species ...\'
 Rscript extract_aq.R $dir o3        &
@@ -524,11 +528,11 @@ echo \'folder:\' $dir
 date
 
 echo \'extracting AQ time-series for meteorology ...\'
-Rscript extract_exp.R $dir T2 3d  &
-Rscript extract_exp.R $dir Q2 3d  &
+Rscript extract_exp.R $dir T2 2dt  &
+Rscript extract_exp.R $dir Q2 2dt  &
 Rscript extract_exp.R $dir P      &
-Rscript extract_exp.R $dir U10 3d &
-Rscript extract_exp.R $dir V10 3d &
+Rscript extract_exp.R $dir U10 2dt &
+Rscript extract_exp.R $dir V10 2dt &
 
 echo \'extracting AQ time-series for species ...\'
 Rscript extract_exp.R $dir o3        &
@@ -591,13 +595,13 @@ Rscript extract_exp.R $dir ASOA      &
 wait
 echo \'extracting PBL variables...\'
 
-Rscript extract_exp.R $dir PBLH   3d &
-Rscript extract_exp.R $dir LH     3d &
-Rscript extract_exp.R $dir HFX    3d &
-Rscript extract_exp.R $dir QFX    3d &
-Rscript extract_exp.R $dir UST    3d &
-Rscript extract_exp.R $dir RAINNC 3d &
-Rscript extract_exp.R $dir RAINC  3d &
+Rscript extract_exp.R $dir PBLH   2dt &
+Rscript extract_exp.R $dir LH     2dt &
+Rscript extract_exp.R $dir HFX    2dt &
+Rscript extract_exp.R $dir QFX    2dt &
+Rscript extract_exp.R $dir UST    2dt &
+Rscript extract_exp.R $dir RAINNC 2dt &
+Rscript extract_exp.R $dir RAINC  2dt &
 
 wait
 
@@ -1634,7 +1638,7 @@ write_stat(stat = mod_stats_d03,
  r-script',paste0(root,'table_metar_WD.R'),': evaluation of wind direction using METAR\n')
 }
 
-### SETUP for extract CAMx for 3 domains
+### SETUP for extract CAMx for 1 domain
 if(template == 'CAMx'){
   dir.create(path = paste0(root,'CAMx/',case),
              recursive = TRUE,
@@ -1719,34 +1723,9 @@ extract_serie(filelist = files,
               point    = stations,
               variable = var,
               field    = ndim,
-              latitude = "latitude",
-              longitude = "longitude",
+              model    = "CAMx",
               use_TFLAG = T,
               prefix   = "aeronet.d01")
-
-files    <- dir(path = dir, pattern = "grd02.nc",full.names = T)
-
-extract_serie(filelist = files,
-              new      = T,
-              point    = stations,
-              variable = var,
-              field    = ndim,
-              latitude = "latitude",
-              longitude = "longitude",
-              use_TFLAG = T,
-              prefix   = "aeronet.d02")
-
-files    <- dir(path = dir, pattern = "grd03.nc",full.names = T)
-
-extract_serie(filelist = files,
-              new      = T,
-              point    = stations,
-              variable = var,
-              field    = ndim,
-              latitude = "latitude",
-              longitude = "longitude",
-              use_TFLAG = T,
-              prefix   = "aeronet.d03")
 
   ',
 file = paste0(root,'extract_camx.R'),
@@ -1760,7 +1739,7 @@ append = FALSE)
 
 
 ### SETUP for extract CAMx for 3 domains
-if(template == 'CAMx'){
+if(template == 'CAMx-3'){
   dir.create(path = paste0(root,'CAMx/',case),
              recursive = TRUE,
              showWarnings = FALSE)
@@ -1844,8 +1823,7 @@ extract_serie(filelist = files,
               point    = stations,
               variable = var,
               field    = ndim,
-              latitude = "latitude",
-              longitude = "longitude",
+              model    = "CAMx",
               use_TFLAG = T,
               prefix   = "aeronet.d01")
 
@@ -1856,8 +1834,7 @@ extract_serie(filelist = files,
               point    = stations,
               variable = var,
               field    = ndim,
-              latitude = "latitude",
-              longitude = "longitude",
+              model    = "CAMx",
               use_TFLAG = T,
               prefix   = "aeronet.d02")
 
@@ -1868,8 +1845,7 @@ extract_serie(filelist = files,
               point    = stations,
               variable = var,
               field    = ndim,
-              latitude = "latitude",
-              longitude = "longitude",
+              model    = "CAMx",
               use_TFLAG = T,
               prefix   = "aeronet.d03")
 
@@ -2086,7 +2062,7 @@ append = FALSE)
 }
 
 ### SETUP for post process WRF for satellite evaluation
-if(template == 'PSA'){
+if(template == 'NCO'){
   dir.create(path = paste0(root,'WRF/',case),
              recursive = TRUE,
              showWarnings = FALSE)
@@ -2440,6 +2416,191 @@ for(VAR in c("T2","RH","WS","WD","rain")){
     cat(' R-Script ', paste0(root,'merge_METAR.R'),': script to merge METAR observations\n')
     cat(' folder ',   paste0(root,'INMET/'),       ': place all INMET data (input and output)\n')
     cat(' folder ',   paste0(root,'METAR/'),       ': place all METAR data (input and output)\n')
+  }
+}
+
+### script to process meteorological data (.csv) downloaded from ISD
+if(template == 'ISD'){
+  dir.create(path = paste0(root,'ISD/raw'),
+             recursive = TRUE,
+             showWarnings = FALSE)
+  dir.create(path = paste0(root,'ISD/Rds'),
+             recursive = TRUE,
+             showWarnings = FALSE)
+
+  cat(paste0('input_folder <- "',paste0(root,'ISD/raw/'),'"
+out_folder   <- "',paste0(root,'ISD/Rds/'),'"
+
+calculate_full_humidity <- function(temp_C, dew_point_C, pressure_hPa = 1013.25) {
+
+  # if pressure is missing, consider standard atmosphere
+  pressure_hPa[is.na(pressure_hPa)] = 1013.25
+
+  # Constants
+  A    <- 17.67
+  B    <- 243.5
+  RdRv <- 0.622  # Ratio of gas constants for dry air to water vapor
+
+  # Saturation vapor pressure (hPa)
+  e_s <- 6.112 * exp((A * temp_C) / (temp_C + B))
+
+  # Actual vapor pressure from dew point (hPa)
+  e <- 6.112 * exp((A * dew_point_C) / (dew_point_C + B))
+
+  # Relative Humidity (%)
+  RH <- (e / e_s) * 100
+
+  # Absolute Humidity (g/m³)
+  AH <- (216.7 * e) / (temp_C + 273.15)
+
+  # Mixing Ratio (w) in g/kg
+  w <- RdRv * (e / (pressure_hPa - e)) * 1000  # g/kg
+
+  # Specific Humidity (q) in g/kg
+  q <- (w / (1 + (w / 1000)))  # g/kg
+
+  return(list(
+    Relative_Humidity_percent = RH,
+    Absolute_Humidity_g_m3 = AH,
+    Mixing_Ratio_g_per_kg = w,
+    Specific_Humidity_g_per_kg = q
+  ))
+}
+
+input_files  <- dir(path = input_folder, full.names = TRUE)
+file_names   <- dir(path = input_folder, full.names = FALSE)
+output_files <- paste0(out_folder,"ISD_",substr(file_names,1,11),".Rds")
+
+files <- dir(path = input_folder,pattern = ".csv",full.names = TRUE)
+
+site_list <- data.frame()
+for(i in 1:length(files)){
+  cat("listing ISD site",i,"from",length(files),"...\\n")
+  data      <- read.csv(files[i], nrows = 2)
+  station   <- data.frame(ID        = data$STATION[1],
+                          name      = data$NAME[1],
+                          lon       = data$LONGITUDE[1],
+                          lat       = data$LATITUDE[1],
+                          elevation = data$ELEVATION[1],
+                          type      = data$REPORT_TYPE[1],
+                          source    = data$SOURCE[1],
+                          stringsAsFactors = FALSE)
+  site_list <- rbind(site_list,station)
+}
+row.names(site_list) <- site_list$ID  # put ID in row.names
+site_list            <- site_list[-1] # remove ID
+
+saveRDS(site_list,paste0(out_folder,"site_list_ISD.Rds"))
+
+for(i in 1:length(input_files)){
+  cat("processing ISD data",i,"from",length(input_files),"...\\n")
+  data    <- read.csv(input_files[i])
+  if(nrow(data) < 1) next()
+  station <- data.frame(date   = as.POSIXct(data$DATE, format = "%Y-%m-%dT%H:%M:%OS",tz = "UTC"),
+                        name   = data$STATION,
+                        long   = data$NAME,
+                        WS     = as.numeric(substr(data$WND,start = 9,stop = 12))/ 10, ## 0.1 x m/s
+                        WD     = as.numeric(substr(data$WND,start = 1,stop = 3)),      ## degree north
+                        T2     = as.numeric(substr(data$TMP,start = 1,stop = 5)) / 10, ## 0.1 C
+                        DEW    = as.numeric(substr(data$DEW,start = 1,stop = 5)) / 10, ## 0.1 C
+                        PRESS  = as.numeric(substr(data$SLP,start = 1,stop = 5)) / 10, ## 0.1 C hpa
+                        stringsAsFactors = FALSE)
+
+  station$T2[     station$T2   >= 100   ] = NA
+  station$DEW[    station$DEW  >= 100   ] = NA
+  station$WS[     station$WS   >= 100   ] = NA
+  station$WD[     station$WD   >  360   ] = NA
+  station$WS[     station$WS   <= 0     ] = NA
+  station$WD[     station$WS   <= 0     ] = NA
+  station$PRESS[  station$PRESS >= 9999 ] = NA
+
+  humid <- calculate_full_humidity(temp_C       = station$T2,
+                                   dew_point_C  = station$DEW,
+                                   pressure_hPa = station$PRESS)
+
+  station$RU <- humid$Relative_Humidity_percent
+  station$Q2 <- humid$Specific_Humidity_g_per_kg
+
+  saveRDS(station,paste0(output_files[i]))
+
+  # print( summary(station) )
+}
+cat("completed!")
+'),
+      file = paste0(root,'process_isd.R'),
+      append = FALSE)
+
+  if(verbose){
+    cat(' R-Script ', paste0(root,'process_isd.R'),': script to process meteorological observations and site-list from ISD\n')
+    cat(' folder ',   paste0(root,'ISD/raw/'),     ': input folder (.csv)\n')
+    cat(' folder ',   paste0(root,'ISD/Rds/'),     ': output folder (.Rds)\n')
+  }
+}
+
+### script to process WRF for satellite evaluation using terra R-package
+if(template == 'terra'){
+  dir.create(path = paste0(root,'WRF/',case),
+             recursive = TRUE,
+             showWarnings = FALSE)
+
+  cat(paste0('library(eva3dm)
+library(terra)
+
+setwd("',root,'")
+
+years ="2018"     # year to be processed
+months="07"       # month to be processed
+domain="d01"      # domain to be processed
+output="WRF/',case,'" # input and output folder
+
+inputf <- dir(path = output, pattern = paste0("wrfout_",domain,"_"),full.names = TRUE)
+VAR2D  <- c("RAINC","RAINNC","HGT",                                    # meteorological
+            "GLW","GSW","LWCF","SWCF","SWDOWN","OLR")                  # radiation variables
+VAR3D  <- c("PB","P","T","PHB","PH",                                   # meteorological
+            "QNDROP","CCN5","CLDFRA","TAUCLDI","TAUCLDC","QCLOUD",     # cloud variables
+            "TAUAER1","TAUAER2","TAUAER3","TAUAER4",                   # optical
+            "ALT","co","no2","form","so2","o3")                        # column concentration
+
+# VAR2D <- "skip"
+# VAR3D <- "skip"
+
+for(year in years)
+for(month in months){
+  cat("processing WRF-Chem output for",year,"-",month,"\\n")
+  cat("processing 2D variables ...\\n")
+
+  input <- grep(paste0(year,"-",month),inputf,value = T)
+
+  for(VAR in VAR2D){
+    if(!VAR %in% vars(input)){
+      cat(VAR,"not found\\n")
+      next
+    }
+    output_file <- paste0(output,"/WRF.",domain,".",VAR,".nc")
+    R           <- wrf_rast(file = input, name = VAR, verbose = TRUE)
+    cat("saving", output_file,"\\n")
+    writeCDF(x = R, varname = VAR,filename = output_file, overwrite=TRUE, compression=9)
+  }
+  cat("processing 3D variables ...\\n")
+  for(VAR in VAR3D){
+    if(!VAR %in% vars(input)){
+      cat(VAR,"not found\\n")
+      next
+    }
+    output_file <- paste0(output,"/WRF.",domain,".",VAR,".nc")
+    SDS         <- wrf_sds(file = input, name = VAR, verbose = TRUE)
+    cat("saving", output_file,"\\n")
+    writeCDF(x = SDS, filename = output_file, overwrite=TRUE, compression=9)
+  }
+}
+cat("done!")
+'),
+      file = paste0(root,'post-R_terra.R'),
+      append = FALSE)
+
+  if(verbose){
+    cat(' R-Script ', paste0(root,'post-R_terra.R'),': script to process WRF outputs using terra for satelite evaluation\n')
+    cat(' folder ',   paste0(root,'WRF/',case),     ': input and output folder\n')
   }
 }
 

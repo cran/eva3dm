@@ -7,7 +7,6 @@
 hourly(
   data,
   time = "date",
-  var,
   stat = mean,
   min_offset = 30,
   numerical = TRUE,
@@ -18,8 +17,6 @@ hourly(
 \item{data}{data.frame with time column and variable columns to be processed}
 
 \item{time}{name of the time column (default is date) in POSIXct}
-
-\item{var}{name of the columns to be calculated}
 
 \item{stat}{function of the statistics to calculate (default is mean)}
 
@@ -35,7 +32,7 @@ data.frame including only numerical columns
 data.frame with time and the hourly mean, min or max
 }
 \description{
-function to calculate Ozone Maximum Daily 8-hr Average or 8-hr moving Average for a data.frame
+function to calculate hourly mean, min or max of a data.frame
 }
 \examples{
 # in case there is connection issue

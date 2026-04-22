@@ -1,10 +1,9 @@
 #' Calculate hourly mean, min or max
 #'
-#' @description function to calculate Ozone Maximum Daily 8-hr Average or 8-hr moving Average for a data.frame
+#' @description function to calculate hourly mean, min or max of a data.frame
 #'
 #' @param data data.frame with time column and variable columns to be processed
 #' @param time name of the time column (default is date) in POSIXct
-#' @param var name of the columns to be calculated
 #' @param stat function of the statistics to calculate (default is mean)
 #' @param min_offset minutes of observation from previous hour (default is 30)
 #' @param numerical TRUE (default) includes only numerical columns
@@ -37,7 +36,7 @@
 #' data_hourly_min  <- hourly(DATA[1:7],time = 'valid',stat = min)
 #' data_hourly_max  <- hourly(DATA[1:7],time = 'valid',stat = max)
 #'
-hourly <- function(data, time = 'date', var, stat = mean, min_offset = 30,
+hourly <- function(data, time = 'date', stat = mean, min_offset = 30,
                    numerical = TRUE, verbose = TRUE){
 
   if(verbose) cat('processing hourly data ... \n')

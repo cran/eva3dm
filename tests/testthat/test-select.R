@@ -7,6 +7,8 @@ test_that("select works!", {
   d     <- select(data = model, year = 2012,month = 1, day = 1,hour = 0,minutes = 0,seconds = 0)
   e     <- select(data = model, month = 'JAN')
   f     <- select(data = model, day = 'tue')
+  g     <- select(data = model, range = model)
+  h     <- select(data = model, julian = 1)
 
   expect_equal(nrow(a) + nrow(b), nrow(model))
 })

@@ -9,6 +9,7 @@
 #' @param hour numeric vector (0-23) for selection
 #' @param minutes numeric vector (0-60) for selection
 #' @param seconds numeric vector (0-60) for selection
+#' @param julian Julian day (1-366)
 #' @param start POSIXct or character (YYYY-MM-DD) with the initial date of selection
 #' @param end POSIXct or character (YYYY-MM-DD) with the initial date of selection
 #' @param range pair of start/end or a data.frame with time (default is "date")
@@ -35,7 +36,7 @@
 #' summary(select(data = model, day  = 'jan'))
 
 select <- function (data,
-                    year, month, day, hour, minutes, seconds,
+                    year, month, day, hour, minutes, seconds, julian,
                     start, end, range,
                     time = "date")
 {
@@ -46,10 +47,11 @@ select <- function (data,
   hh <- function(x) as.numeric(format(x,"%H"))
   mi <- function(x) as.numeric(format(x,"%M"))
   ss <- function(x) as.numeric(format(x,"%S"))
+  jd <- function(x) as.numeric(format(x,"%j"))
 
   if(!missing(range)){
     if(is.data.frame(range)){
-      range <- base::range(range[,time])
+      range <- base::range(range[,time], na.rm = TRUE)
       start <- range[1]
       end   <- range[2]
     }else{
@@ -61,12 +63,12 @@ select <- function (data,
   if (!missing(start)) {
     if(is.character(start))
       start <- as.POSIXct(start)
-    data  <- subset(data, format(data[,time],"%s") >= format(start,"%s"))
+    data <- data[data[[time]] >= start, ]
   }
   if (!missing(end)) {
     if(is.character(end))
       end  <- as.POSIXct(end)
-    data <- subset(data, format(data[,time],"%s") <= format(end,"%s"))
+    data <- data[data[[time]] <= end, ]
   }
   if (!missing(year)) {
     data <- data[which(yy(data[,time]) %in% year), ]
@@ -79,7 +81,7 @@ select <- function (data,
       data <- data[which(mm(data[,time]) %in% month),]
     }
     else {
-      data <- subset(data, substr(tolower(format(date,"%B")), 1, 3) %in% substr(tolower(month), 1,3))
+      data <- data[substr(tolower(format(data[[time]], "%B")), 1, 3) %in% substr(tolower(month), 1, 3), ]
     }
   }
   if (!missing(hour)) {
@@ -113,7 +115,18 @@ select <- function (data,
       if (day[1] == "weekend") {
         days <- weekday.names[6:7]
       }
-      data <- subset(data, substr(tolower(format(date,"%A")), 1, 3) %in% substr(tolower(days), 1, 3))
+      data <- data[substr(tolower(format(data[[time]], "%A")), 1, 3) %in% substr(tolower(days), 1, 3), ]
+    }
+  }
+  if (!missing(julian)) {
+    if (is.numeric(julian)) {
+      if (any(julian < 1 | julian > 366)) {
+        stop("Julian day must be between 1 to 366.") # nocov
+      }
+      data <- data[which(jd(data[,time]) %in% julian),]
+    }
+    else {
+      stop("Julian day must be numeric.") # nocov
     }
   }
   return(data)

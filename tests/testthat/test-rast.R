@@ -22,17 +22,21 @@ test_that("rast based functions are ok", {
 
   r2 = r
   r2[] = 2
-  plot_rast(r2)
+  r2[50,100] = NA
+  plot_rast(r2, fill = TRUE)
 
   p         <- readRDS(paste0(system.file("extdata",package="eva3dm"),"/sites_AQ_BR.Rds"))
   p$id      <- row.names(p)
   point     <- terra::vect(p)
   point$NMB <- 1:45 - 20 # some values to plot
-  overlay(point,point$NMB,cex = 1.4, add = TRUE) #
+  overlay(point,point$NMB,cex = 1.4, add = TRUE)
 
   overlay(point,point$NMB,cex = 1.4, add = FALSE, main = 'new plot')
 
   plot_diff(r,r2)
 
-  expect_equal(dim(r_ncdf), c(99,149,1))
+  O34d <- wrf_sds(paste0(system.file("extdata",package="eva3dm"),"/wrf_4d_o3_Boston.nc"),'o3')
+  O3_column <- calculate_column(paste0(system.file("extdata",package="eva3dm"),"/wrf_column_o3_Boston.nc"),'o3')
+
+  expect_equal(dim(r_ncdf), c(149,99,1))
 })

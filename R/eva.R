@@ -1,15 +1,15 @@
 #' Model statistical evaluation
 #'
 #' @description Statistical (or categorical) evaluation from 2 data.frames. The input data.frames (model and observation)
-#' must contain a "date" column (containing POSIXlt). The function perform some simple case tests and
-#' perform the time pairing of observations and model data and can calculate the statistical evaluation or
+#' must contain a time column (containing POSIXlt). The function perform pre-conditioning of the data,
+#' data pairing (using the time column) of the observations and model and calculate the metrics for statistical or
 #' categorical evaluation.
 #'
 #' @param mo data.frame with model data
 #' @param ob data.frame with observation data
 #' @param rname row name of the output (default is site argument)
 #' @param table data.frame to append the results
-#' @param site name of the stations or "ALL" (default), see notes
+#' @param site name of the station or "ALL" (default) or "complete", see notes
 #' @param wd default is FALSE, see notes
 #' @param fair model data.frame (or list of names) to perform a fair comparison, see notes
 #' @param cutoff minimum (optionally the maximum) valid value for observation
@@ -20,21 +20,24 @@
 #' @param select_time select the observation (ob) using time from model (mo) data.frame
 #' @param time name of the time column (containing time in POSIXct)
 #' @param remove_ch remove special characters on column names
+#' @param clean remove rows when number of observations < nobs, for site="complete"
 #' @param verbose display additional information
 #' @param ... arguments to be passing to stats and plot
 #'
-#' @return data.frame with statistical values from stat or cate functions.
+#' @return data.frame with statistical metric
 #'
-#' @note fair can be a data.frame or a character string to be used for the analysis, alternatively the function %IN% can be used: model_d01 %IN% model_d02 instead.
+#' @note Fair argument can be a data.frame or a character string to be used for the analysis, alternatively the function %IN% can be used instead, for example model_d01 %IN% model_d02.
 #'
-#' @note for wind direction a rotation of 360 (or -360) is applied to minimize the wind direction difference.
+#' @note If wd = TRUE, used for wind direction, a rotation of 360 (or -360) is applied to minimize the wind direction difference.
 #'
 #' @note If site == 'ALL' (default) all the columns from observations are combined in one column
 #' (same for observation) and all the columns are evaluated together.
 #'
+#' @note If site == 'complete' a internal loop, calls recursively eva() to evaluate all sites in the first argument (model) and using all sites (see "ALL").
+#'
 #' @note Special thanks to Kiarash and Libo to help to test the wind direction option.
 #'
-#' @seealso \code{\link{stat}} for additional information about the statistical evaluation and \code{\link{cate}} for categorical evaluation.
+#' @seealso \code{\link{stat}} for additional information about the statistical metrics and \code{\link{cate}} for categorical metrics, and check the example with the custom evaluation function (inclusion of p.value from stats::cor.test()).
 #'
 #' @export
 #'
@@ -63,7 +66,7 @@
 #'              eval_function = cate, threshold = 2)
 #' print(table)
 #'
-#' # calculating categorical (using 2 for threshold) with a few observed values
+#' # calculating categorical (using 10 for threshold) with a few observed values
 #' table <- eva(mo = model, ob = obs, site = "Americana",
 #'              eval_function = cate, threshold = 10)
 #' print(table)
@@ -84,7 +87,7 @@ eva <- function(mo, ob, rname = site, table = NULL,
                 site = 'ALL', wd = FALSE, fair = NULL,
                 cutoff = NA, cutoff_NME = NA, no_tz = FALSE,
                 nobs = 8, eval_function = stat, select_time,
-                time = 'date', remove_ch = FALSE,
+                time = 'date', remove_ch = FALSE, clean = TRUE,
                 verbose = TRUE, ...){
 
   if(!is.data.frame(mo))
@@ -102,16 +105,27 @@ eva <- function(mo, ob, rname = site, table = NULL,
     mo <- as.data.frame(mo) # nocov
 
   if(missing(select_time)){
-    select_time = nrow(ob) >= nrow(mo)
+    select_time = nrow(ob) > nrow(mo)
   }
 
   if(select_time){
-    ob <- select(data = ob, range = mo, time = time)
+    ob <- select(data = ob, range = mo, time = time) # nocov
   }
 
   if(remove_ch){
     names(mo) <- iconv(names(mo), from = 'UTF-8', to = 'ASCII//TRANSLIT') # nocov
     names(ob) <- iconv(names(ob), from = 'UTF-8', to = 'ASCII//TRANSLIT') # nocov
+  }
+
+  if(site == 'complete'){
+    sites  <- names(model)[!names(model) %in% time]                    # nocov
+    RESULT <- data.frame()                                             # nocov
+    for(s in sites){                                                   # nocov
+      RESULT <- eva(mo = mo, ob = ob,table = RESULT, site = s, ... )   # nocov
+    }                                                                  # nocov
+    RESULT <- eva(mo = mo, ob = ob,table = RESULT, site = 'ALL', ... ) # nocov
+    if(clean) RESULT <- RESULT[ RESULT$n > nobs, ]                     # nocov
+    return(RESULT)                                                     # nocov
   }
 
   if(site == "ALL"){
@@ -132,8 +146,32 @@ eva <- function(mo, ob, rname = site, table = NULL,
     combination_model <- data.frame()
     combination_obs   <- data.frame()
     a_number          <- 666 * 60 * 60 * 24 * 365 + 161 * 60 * 60 * 24
+    n_stations        = 0
+    n_skiped          = 0
     for(i in seq_along(common_sites)){
-      if(verbose) cat(common_sites[i],' ')
+      A <- mo[[common_sites[i]]]
+      B <- ob[[common_sites[i]]]
+      to_run = TRUE
+      if(suppressWarnings( max(A,na.rm = T) ) == suppressWarnings( min(A,na.rm = TRUE)) ){
+        to_run = FALSE
+      }
+      if(suppressWarnings( max(B,na.rm = T) ) == suppressWarnings( min(B,na.rm = TRUE)) ){
+        to_run = FALSE
+      }
+      if(length(B[!is.na(B)]) > nobs & to_run){
+        if(verbose) cat(paste0(common_sites[i],'(ok) '))
+        n_stations = n_stations + 1
+      }else{
+        if(verbose) cat(paste0(common_sites[i],'(skiped) '))
+        n_skiped   = n_skiped + 1
+        next
+      }
+
+      if (length(mo[[common_sites[i]]]) == 0) {
+        cat("Skipping column with no data: ", common_sites[i],'\n')
+        next
+      }
+
       new_mo            <- data.frame(date = mo[,time],
                                       ALL  = mo[[common_sites[i]]])
       new_mo$date       <- new_mo$date + (i- 1) * a_number
@@ -144,7 +182,7 @@ eva <- function(mo, ob, rname = site, table = NULL,
       new_ob$date       <- new_ob$date + (i - 1) * a_number
       combination_obs   <- rbind(combination_obs, new_ob)
     }
-    if(verbose) cat('...\n')
+    if(verbose) cat('...\n','total:', n_stations,'stations with valid data,',n_skiped,'stations not included\n')
     mo <- combination_model
     ob <- combination_obs
   }else{
@@ -184,7 +222,7 @@ eva <- function(mo, ob, rname = site, table = NULL,
     if(verbose) cat(site,'contains only zeros (or constant values) and NA values for model\n')
     to_run = FALSE
   }
-  if(suppressWarnings(  max(B,na.rm = T) ) == suppressWarnings( min(B,na.rm = TRUE)) ){
+  if(suppressWarnings( max(B,na.rm = T) ) == suppressWarnings( min(B,na.rm = TRUE)) ){
     if(verbose) cat(site,'contains only zeros (or constant values) and NA values for observations\n')
     to_run = FALSE
   }
